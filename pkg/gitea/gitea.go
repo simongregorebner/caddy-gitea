@@ -49,6 +49,7 @@ func (c *Client) Open(name, ref string) (fs.File, error) {
 
 	fmt.Printf("TEST: %s\n", name)
 	owner, repo, filepath := splitName(name)
+	fmt.Printf("owner: %s repo: %s filepath: %s\n", owner, repo, filepath)
 
 	// if repo is empty they want to have the gitea-pages repo
 	if repo == "" {
