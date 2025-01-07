@@ -46,6 +46,7 @@ func NewClient(serverURL, token, giteapages, giteapagesAllowAll string) (*Client
 }
 
 func (c *Client) Open(name, ref string) (fs.File, error) {
+	fmt.Println(name)
 	owner, repo, filepath := splitName(name)
 
 	// if repo is empty they want to have the gitea-pages repo

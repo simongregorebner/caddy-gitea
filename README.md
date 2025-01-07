@@ -118,3 +118,9 @@ To build with this plugin you'll need to have go1.19 installed.
 go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest #this will install xcaddy in ~/go/bin
 ~/go/bin/xcaddy build --with github.com/42wim/caddy-gitea@v0.0.4
 ```
+
+
+## Testing
+```bash
+curl -H "Host: linux.pages-test" http://localhost:8080/index.html 
+```
