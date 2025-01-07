@@ -129,7 +129,7 @@ func (c *Client) getRawFileOrLFS(owner, repo, filepath, ref string) ([]byte, err
 
 	// TODO: make pr for go-sdk
 	// gitea sdk doesn't support "media" type for lfs/non-lfs
-	giteaURL, err = url.JoinPath(c.serverURL+"/api/v1/repos/", owner, repo, "media2", url.QueryEscape(filepath))
+	giteaURL, err = url.JoinPath(c.serverURL+"/api/v1/repos/", owner, repo, "media", url.QueryEscape(filepath))
 	if err != nil {
 		return nil, err
 	}
