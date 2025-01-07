@@ -124,6 +124,7 @@ func (c *Client) Open(name, ref string) (fs.File, error) {
 }
 
 func (c *Client) getRawFileOrLFS(owner, repo, filepath, ref string) ([]byte, error) {
+	fmt.Printf("GET RAW owner: %s repo: %s filepath: %s\n", owner, repo, filepath)
 	var (
 		giteaURL string
 		err      error
