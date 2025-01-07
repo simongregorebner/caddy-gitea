@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/42wim/caddy-gitea/pkg/gitea"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
+	"github.com/simongregorebner/caddy-gitea/pkg/gitea"
 )
 
 func init() {
