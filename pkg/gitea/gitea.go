@@ -72,7 +72,11 @@ func (c *Client) Open(name, ref string) (fs.File, error) {
 
 		// the repo didn't exist but maybe it's a filepath in the gitea-pages repo
 		// so we need to check if the gitea-pages repo exists
-		filepath = repo + "/" + filepath
+		if filepath != "" {
+			filepath = repo + "/" + filepath
+		} else {
+			filepath = repo
+		}
 		repo = c.giteapages
 
 		if ref == "" {
