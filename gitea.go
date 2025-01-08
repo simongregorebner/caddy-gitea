@@ -108,9 +108,17 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhtt
 	if err != nil {
 		return caddyhttp.Error(http.StatusNotFound, err)
 	}
-	// w.Header().Add("Content-Type", "text/css")
-	fmt.Println(r.URL.Path)
-	w.Header().Add("Content-Type", mime.TypeByExtension(".css"))
+
+	// try to determine mime type based on extenstion of file
+	parts := strings.Split(r.URL.Path, ".")
+	var ext string
+	if len(parts) > 1 {
+		ext = parts[len(parts)-1]
+		fmt.Println(ext)
+		w.Header().Add("Content-Type", mime.TypeByExtension("."+ext))
+	}
+
+	// w.Header().Add("Content-Type", mime.TypeByExtension(".css"))
 
 	_, err = io.Copy(w, f)
 
