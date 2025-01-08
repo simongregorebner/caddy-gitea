@@ -12,6 +12,7 @@ import (
 
 	gclient "code.gitea.io/sdk/gitea"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 type Client struct {
@@ -20,9 +21,10 @@ type Client struct {
 	giteapages         string
 	giteapagesAllowAll string
 	gc                 *gclient.Client
+	logger             *zap.Logger
 }
 
-func NewClient(serverURL, token, giteapages, giteapagesAllowAll string) (*Client, error) {
+func NewClient(logger *zap.Logger, serverURL, token, giteapages, giteapagesAllowAll string) (*Client, error) {
 	if giteapages == "" {
 		giteapages = "gitea-pages"
 	}
@@ -42,14 +44,16 @@ func NewClient(serverURL, token, giteapages, giteapagesAllowAll string) (*Client
 		gc:                 gc,
 		giteapages:         giteapages,
 		giteapagesAllowAll: giteapagesAllowAll,
+		logger:             logger,
 	}, nil
 }
 
 func (c *Client) Open(name, ref string) (fs.File, error) {
 
-	fmt.Printf("TEST: %s\n", name)
+	// fmt.Printf("TEST: %s\n", name)
+	c.logger.Info(fmt.Sprintf("TEST: %s\n", name))
 	owner, repo, filepath := splitName(name)
-	fmt.Printf("owner: %s repo: %s filepath: %s\n", owner, repo, filepath)
+	// fmt.Printf("owner: %s repo: %s filepath: %s\n", owner, repo, filepath)
 
 	// if repo is empty they want to have the gitea-pages repo
 	if repo == "" {

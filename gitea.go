@@ -44,8 +44,13 @@ func (Middleware) CaddyModule() caddy.ModuleInfo {
 
 // Provision provisions gitea client.
 func (m *Middleware) Provision(ctx caddy.Context) error {
+
 	var err error
-	m.Client, err = gitea.NewClient(m.Server, m.Token, m.GiteaPages, m.GiteaPagesAllowAll)
+	// retrieve logger from the caddy context
+	// https://caddyserver.com/docs/extending-caddy#logs
+	var logger = ctx.Logger() // get logger
+
+	m.Client, err = gitea.NewClient(logger, m.Server, m.Token, m.GiteaPages, m.GiteaPagesAllowAll)
 
 	return err
 }
