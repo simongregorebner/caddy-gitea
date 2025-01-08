@@ -1,7 +1,6 @@
 package gitea
 
 import (
-	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -114,7 +113,7 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhtt
 	var ext string
 	if len(parts) > 1 {
 		ext = parts[len(parts)-1]
-		fmt.Println(ext)
+		// fmt.Println(ext)
 		w.Header().Add("Content-Type", mime.TypeByExtension("."+ext))
 	}
 
