@@ -109,21 +109,32 @@ e.g. we'll use the `yourrepo` repo in the `yourorg` org and there is a `file.htm
 - Your `otherfile.html` in the `dev` branch will now be available on <http://yourorg.pages.yourdomain.com:3000/yourrepo/file.html?ref=dev>
 - Your `otherfile.html` in the `dev` branch will now be available on <http://dev.yourrepo.yourorg.pages.yourdomain.com:3000/file.html>
 
-## Building caddy
+# Development
+
+Documentation Caddy extensions: https://caddyserver.com/docs/extending-caddy
+
+## Building Caddy (with this extension)
 
 As this is a 3rd party plugin you'll need to build caddy (or use the binaries).
 To build with this plugin you'll need to have go1.19 installed.
 
 ```go
 go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest #this will install xcaddy in ~/go/bin
-~/go/bin/xcaddy build --with github.com/42wim/caddy-gitea@v0.0.4
+~/go/bin/xcaddy build --with github.com/simongregorebner/caddy-gitea@v0.0.4
 
 xcaddy build --with github.com/simongregorebner/caddy-gitea@f4a6a77
 ```
-
 
 ## Testing
 ```bash
 curl -H "Host: linux.pages-test" http://localhost:8080/index.html 
 curl -H "Host: gitea-pages.linux.pages-test.psi.ch" http://localhost:8080/
+```
+
+## Docker Image
+```bash
+docker build -t container.psi.ch/images/gitea-caddy:1.0.4 .
+
+# cross platform build
+docker build --platform=linux/amd64 -t container.psi.ch/images/gitea-caddy:1.0.4 .
 ```

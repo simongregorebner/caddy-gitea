@@ -1,7 +1,7 @@
 FROM caddy:2.6-builder-alpine AS builder
 
 RUN xcaddy build \
-    --with github.com/42wim/caddy-gitea@v0.0.3
+    --with github.com/simongregorebner/caddy-gitea@v1.0.4
 
 FROM caddy:2.6.2
 
