@@ -106,7 +106,7 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhtt
 	if err != nil {
 		return caddyhttp.Error(http.StatusNotFound, err)
 	}
-
+	w.Header().Add("Content-Type", "text/css")
 	_, err = io.Copy(w, f)
 
 	return err
