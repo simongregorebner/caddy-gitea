@@ -50,10 +50,10 @@ func NewClient(logger *zap.Logger, serverURL, token, giteapages, giteapagesAllow
 
 func (c *Client) Open(name, ref string) (fs.File, error) {
 
-	c.logger.Info(fmt.Sprintf("Retrieve path: %s\n", name))
+	c.logger.Info(fmt.Sprintf("Retrieve path: %s", name))
 	owner, repo, filepath := splitName(name)
 
-	c.logger.Info(fmt.Sprintf("After path split: owner: %s repo: %s filepath: %s\n", owner, repo, filepath))
+	c.logger.Info(fmt.Sprintf("After path split: owner: %s repo: %s filepath: %s", owner, repo, filepath))
 
 	// if repo is empty they want to have the gitea-pages repo
 	if repo == "" {
@@ -132,7 +132,7 @@ func (c *Client) Open(name, ref string) (fs.File, error) {
 }
 
 func (c *Client) getRawFileOrLFS(owner, repo, filepath, ref string) ([]byte, error) {
-	c.logger.Info(fmt.Sprintf("GET raw file - owner: %s repo: %s filepath: %s\n", owner, repo, filepath))
+	c.logger.Info(fmt.Sprintf("GET raw file - owner: %s repo: %s filepath: %s", owner, repo, filepath))
 	var (
 		giteaURL string
 		err      error
