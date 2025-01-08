@@ -57,11 +57,6 @@ func (c *Client) Open(name, ref string) (fs.File, error) {
 		filepath = "index.html"
 	}
 
-	// if filepath is empty they want to have the index.html
-	if filepath == "" {
-		filepath = "index.html"
-	}
-
 	// we need to check if the repo exists (and allows access)
 	limited, allowall := c.allowsPages(owner, repo)
 	if !limited && !allowall {
@@ -72,10 +67,10 @@ func (c *Client) Open(name, ref string) (fs.File, error) {
 
 		// the repo didn't exist but maybe it's a filepath in the gitea-pages repo
 		// so we need to check if the gitea-pages repo exists
-		if filepath != "" {
-			filepath = repo + "/" + filepath
-		} else {
+		if filepath == "" {
 			filepath = repo
+		} else {
+			filepath = repo + "/" + filepath
 		}
 		repo = c.giteapages
 
@@ -99,6 +94,11 @@ func (c *Client) Open(name, ref string) (fs.File, error) {
 		}
 
 		hasConfig = false
+	}
+
+	// if filepath is empty they want to have the index.html
+	if filepath == "" {
+		filepath = "index.html"
 	}
 
 	// if we don't have a config and the repo is the gitea-pages
