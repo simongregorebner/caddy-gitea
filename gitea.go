@@ -1,7 +1,9 @@
 package gitea
 
 import (
+	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"strings"
 
@@ -106,7 +108,10 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhtt
 	if err != nil {
 		return caddyhttp.Error(http.StatusNotFound, err)
 	}
-	w.Header().Add("Content-Type", "text/css")
+	// w.Header().Add("Content-Type", "text/css")
+	fmt.Println(r.URL.Path)
+	w.Header().Add("Content-Type", mime.TypeByExtension(".css"))
+
 	_, err = io.Copy(w, f)
 
 	return err
