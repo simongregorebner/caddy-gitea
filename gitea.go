@@ -92,7 +92,7 @@ func (m *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
 
 	fmt.Println("URL " + r.URL.Path)
-	fp := r.URL.Path
+	fp := strings.TrimPrefix(r.URL.Path, "/") // we need to trim the leading prefix because the rest of the module is too stupid
 	ref := r.URL.Query().Get("ref")
 
 	if m.Simple == "" {
