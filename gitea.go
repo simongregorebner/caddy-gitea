@@ -33,6 +33,7 @@ type Middleware struct {
 	GiteaPages         string        `json:"gitea_pages,omitempty"`
 	GiteaPagesAllowAll string        `json:"gitea_pages_allowall,omitempty"`
 	Domain             string        `json:"domain,omitempty"`
+	Simple             string        `json:"simple,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -76,7 +77,10 @@ func (m *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				d.Args(&m.GiteaPagesAllowAll)
 			case "domain":
 				d.Args(&m.Domain)
+			case "simple":
+				d.Args(&m.Simple)
 			}
+
 		}
 	}
 
@@ -85,21 +89,27 @@ func (m *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 // ServeHTTP performs gitea content fetcher.
 func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
-	// remove the domain if it's set (works fine if it's empty)
-	host := strings.TrimRight(strings.TrimSuffix(r.Host, m.Domain), ".")
-	h := strings.Split(host, ".")
 
-	fp := h[0] + r.URL.Path
+	fp := r.URL.Path
 	ref := r.URL.Query().Get("ref")
 
-	// if we haven't specified a domain, do not support repo.username and branch.repo.username
-	if m.Domain != "" {
-		switch {
-		case len(h) == 2:
-			fp = h[1] + "/" + h[0] + r.URL.Path
-		case len(h) == 3:
-			fp = h[2] + "/" + h[1] + r.URL.Path
-			ref = h[0]
+	if m.Simple == "" {
+		// remove the domain if it's set (works fine if it's empty)
+		host := strings.TrimRight(strings.TrimSuffix(r.Host, m.Domain), ".")
+		h := strings.Split(host, ".")
+
+		fp = h[0] + r.URL.Path
+		ref = r.URL.Query().Get("ref")
+
+		// if we haven't specified a domain, do not support repo.username and branch.repo.username
+		if m.Domain != "" {
+			switch {
+			case len(h) == 2:
+				fp = h[1] + "/" + h[0] + r.URL.Path
+			case len(h) == 3:
+				fp = h[2] + "/" + h[1] + r.URL.Path
+				ref = h[0]
+			}
 		}
 	}
 
