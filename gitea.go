@@ -92,10 +92,10 @@ func (m *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
 
 	fmt.Println("URL " + r.URL.Path)
-	fp := strings.TrimPrefix(r.URL.Path, "/") // we need to trim the leading prefix because the rest of the module is too stupid
-	ref := r.URL.Query().Get("ref")
 
-	if m.Simple == "" {
+	var fp, ref string
+	if m.Simple != "" {
+		fmt.Println("NON SIMPLE SETUP")
 		// remove the domain if it's set (works fine if it's empty)
 		host := strings.TrimRight(strings.TrimSuffix(r.Host, m.Domain), ".")
 		h := strings.Split(host, ".")
@@ -113,6 +113,9 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhtt
 				ref = h[0]
 			}
 		}
+	} else {
+		fp = strings.TrimPrefix(r.URL.Path, "/") // we need to trim the leading prefix because the rest of the module is too stupid
+		ref = r.URL.Query().Get("ref")
 	}
 
 	f, err := m.Client.Open(fp, ref)
