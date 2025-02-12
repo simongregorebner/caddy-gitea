@@ -95,6 +95,9 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhtt
 
 	var fp, ref string
 	if m.Simple != "" {
+		fp = strings.TrimPrefix(r.URL.Path, "/") // we need to trim the leading prefix because the rest of the module is too stupid
+		ref = r.URL.Query().Get("ref")
+	} else {
 		fmt.Println("NON SIMPLE SETUP")
 		// remove the domain if it's set (works fine if it's empty)
 		host := strings.TrimRight(strings.TrimSuffix(r.Host, m.Domain), ".")
@@ -113,9 +116,6 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhtt
 				ref = h[0]
 			}
 		}
-	} else {
-		fp = strings.TrimPrefix(r.URL.Path, "/") // we need to trim the leading prefix because the rest of the module is too stupid
-		ref = r.URL.Query().Get("ref")
 	}
 
 	f, err := m.Client.Open(fp, ref)
