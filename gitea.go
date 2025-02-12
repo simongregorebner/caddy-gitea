@@ -1,6 +1,7 @@
 package gitea
 
 import (
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -90,6 +91,7 @@ func (m *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 // ServeHTTP performs gitea content fetcher.
 func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
 
+	fmt.Println("URL " + r.URL.Path)
 	fp := r.URL.Path
 	ref := r.URL.Query().Get("ref")
 
