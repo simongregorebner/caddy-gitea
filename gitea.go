@@ -3,6 +3,7 @@ package gitea
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"mime"
 	"net/http"
 	"strings"
@@ -28,13 +29,12 @@ func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error)
 
 // GiteaPagesModule implements gitea plugin.
 type GiteaPagesModule struct {
-	Client             *gitea.Client `json:"-"`
-	Server             string        `json:"server,omitempty"`
-	Token              string        `json:"token,omitempty"`
-	GiteaPages         string        `json:"gitea_pages,omitempty"`
-	GiteaPagesAllowAll string        `json:"gitea_pages_allowall,omitempty"`
-	Domain             string        `json:"domain,omitempty"`
-	Simple             string        `json:"simple,omitempty"`
+	Client     *gitea.Client `json:"-"`
+	Server     string        `json:"server,omitempty"`
+	Token      string        `json:"token,omitempty"`
+	GiteaPages string        `json:"gitea_pages,omitempty"`
+	Domain     string        `json:"domain,omitempty"`
+	Simple     string        `json:"simple,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -53,7 +53,14 @@ func (module *GiteaPagesModule) Provision(ctx caddy.Context) error {
 	// https://caddyserver.com/docs/extending-caddy#logs
 	var logger = ctx.Logger() // get logger
 
-	module.Client, err = gitea.NewClient(logger, module.Server, module.Token, module.GiteaPages, module.GiteaPagesAllowAll)
+	requiredBranchName := "gitea-pages"
+	requiredTopicName := "gitea-pages"
+	if module.GiteaPages != "" {
+		requiredBranchName = module.GiteaPages
+		requiredTopicName = module.GiteaPages
+	}
+
+	module.Client, err = gitea.NewClient(logger, module.Server, module.Token, requiredBranchName, requiredTopicName)
 
 	return err
 }
@@ -74,8 +81,6 @@ func (module *GiteaPagesModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error
 				d.Args(&module.Token)
 			case "gitea_pages":
 				d.Args(&module.GiteaPages)
-			case "gitea_pages_allowall":
-				d.Args(&module.GiteaPagesAllowAll)
 			case "domain":
 				d.Args(&module.Domain)
 			case "simple":
@@ -83,57 +88,71 @@ func (module *GiteaPagesModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error
 			}
 		}
 	}
-
 	return nil
 }
 
 // ServeHTTP performs gitea content fetcher.
-func (module GiteaPagesModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
+func (module GiteaPagesModule) ServeHTTP(writer http.ResponseWriter, request *http.Request, _ caddyhttp.Handler) error {
 
-	fmt.Println("URL " + r.URL.Path)
+	fmt.Println("URL " + request.URL.Path)
 
-	var fp, ref string
-	if module.Simple != "" {
-		fp = strings.TrimPrefix(r.URL.Path, "/") // we need to trim the leading prefix because the rest of the module is too stupid
-		ref = r.URL.Query().Get("ref")
-	} else {
-		fmt.Println("NON SIMPLE SETUP")
-		// remove the domain if it's set (works fine if it's empty)
-		host := strings.TrimRight(strings.TrimSuffix(r.Host, module.Domain), ".")
-		h := strings.Split(host, ".")
+	var organization, repository, path string
+	if module.Simple != "" { // Simple case
+		// we remove a potential prefix and then split up the path
+		// The path looks like /<organization>/<repository>/ ...
+		parts := strings.Split(strings.TrimPrefix(request.URL.Path, "/"), "/")
 
-		fp = h[0] + r.URL.Path
-		ref = r.URL.Query().Get("ref")
-
-		// if we haven't specified a domain, do not support repo.username and branch.repo.username
-		if module.Domain != "" {
-			switch {
-			case len(h) == 2:
-				fp = h[1] + "/" + h[0] + r.URL.Path
-			case len(h) == 3:
-				fp = h[2] + "/" + h[1] + r.URL.Path
-				ref = h[0]
-			}
+		length := len(parts)
+		if length <= 1 {
+			return caddyhttp.Error(http.StatusNotFound, fs.ErrNotExist)
+		} else if length == 2 {
+			organization = parts[0]
+			repository = parts[1]
+			path = "index.html" // there is no file/path specified
+		} else {
+			organization = parts[0]
+			repository = parts[1]
+			path = strings.Join(parts[2:], "/")
 		}
+		if path == "" {
+			path = "index.html"
+		}
+
+	} else {
+		// TODO not yet supported
+
+		// fmt.Println("NON SIMPLE SETUP")
+		// // remove the domain if it's set (works fine if it's empty)
+		// host := strings.TrimRight(strings.TrimSuffix(request.Host, module.Domain), ".")
+		// h := strings.Split(host, ".")
+
+		// fp = h[0] + request.URL.Path
+
+		// // if we haven't specified a domain, do not support repo.username and branch.repo.username
+		// if module.Domain != "" {
+		// 	switch {
+		// 	case len(h) == 2:
+		// 		fp = h[1] + "/" + h[0] + request.URL.Path
+		// 	case len(h) == 3:
+		// 		fp = h[2] + "/" + h[1] + request.URL.Path
+		// 	}
+		// }
 	}
 
-	f, err := module.Client.Open(fp, ref)
+	// Handle request
+	content, err := module.Client.Get(organization, repository, path)
 	if err != nil {
 		return caddyhttp.Error(http.StatusNotFound, err)
 	}
 
-	// try to determine mime type based on extenstion of file
-	parts := strings.Split(r.URL.Path, ".")
-	var ext string
+	// Try to determine mime type based on extenstion of file
+	parts := strings.Split(request.URL.Path, ".")
 	if len(parts) > 1 {
-		ext = parts[len(parts)-1]
-		// fmt.Println(ext)
-		w.Header().Add("Content-Type", mime.TypeByExtension("."+ext))
+		extension := parts[len(parts)-1] // get file extension
+		writer.Header().Add("Content-Type", mime.TypeByExtension("."+extension))
 	}
 
-	// w.Header().Add("Content-Type", mime.TypeByExtension(".css"))
-
-	_, err = io.Copy(w, f)
+	_, err = io.Copy(writer, content)
 
 	return err
 }
