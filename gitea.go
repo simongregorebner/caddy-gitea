@@ -15,19 +15,19 @@ import (
 )
 
 func init() {
-	caddy.RegisterModule(Middleware{})
+	caddy.RegisterModule(GiteaPagesModule{})
 	httpcaddyfile.RegisterHandlerDirective("gitea", parseCaddyfile)
 }
 
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
-	var m Middleware
-	err := m.UnmarshalCaddyfile(h.Dispenser)
+	var module GiteaPagesModule
+	err := module.UnmarshalCaddyfile(h.Dispenser)
 
-	return m, err
+	return module, err
 }
 
-// Middleware implements gitea plugin.
-type Middleware struct {
+// GiteaPagesModule implements gitea plugin.
+type GiteaPagesModule struct {
 	Client             *gitea.Client `json:"-"`
 	Server             string        `json:"server,omitempty"`
 	Token              string        `json:"token,omitempty"`
@@ -38,50 +38,49 @@ type Middleware struct {
 }
 
 // CaddyModule returns the Caddy module information.
-func (Middleware) CaddyModule() caddy.ModuleInfo {
+func (GiteaPagesModule) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
 		ID:  "http.handlers.gitea",
-		New: func() caddy.Module { return new(Middleware) },
+		New: func() caddy.Module { return new(GiteaPagesModule) },
 	}
 }
 
 // Provision provisions gitea client.
-func (m *Middleware) Provision(ctx caddy.Context) error {
+func (module *GiteaPagesModule) Provision(ctx caddy.Context) error {
 
 	var err error
 	// retrieve logger from the caddy context
 	// https://caddyserver.com/docs/extending-caddy#logs
 	var logger = ctx.Logger() // get logger
 
-	m.Client, err = gitea.NewClient(logger, m.Server, m.Token, m.GiteaPages, m.GiteaPagesAllowAll)
+	module.Client, err = gitea.NewClient(logger, module.Server, module.Token, module.GiteaPages, module.GiteaPagesAllowAll)
 
 	return err
 }
 
 // Validate implements caddy.Validator.
-func (m *Middleware) Validate() error {
+func (module *GiteaPagesModule) Validate() error {
 	return nil
 }
 
 // UnmarshalCaddyfile unmarshals a Caddyfile.
-func (m *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func (module *GiteaPagesModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	for d.Next() {
 		for n := d.Nesting(); d.NextBlock(n); {
 			switch d.Val() {
 			case "server":
-				d.Args(&m.Server)
+				d.Args(&module.Server)
 			case "token":
-				d.Args(&m.Token)
+				d.Args(&module.Token)
 			case "gitea_pages":
-				d.Args(&m.GiteaPages)
+				d.Args(&module.GiteaPages)
 			case "gitea_pages_allowall":
-				d.Args(&m.GiteaPagesAllowAll)
+				d.Args(&module.GiteaPagesAllowAll)
 			case "domain":
-				d.Args(&m.Domain)
+				d.Args(&module.Domain)
 			case "simple":
-				d.Args(&m.Simple)
+				d.Args(&module.Simple)
 			}
-
 		}
 	}
 
@@ -89,25 +88,25 @@ func (m *Middleware) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 }
 
 // ServeHTTP performs gitea content fetcher.
-func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
+func (module GiteaPagesModule) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhttp.Handler) error {
 
 	fmt.Println("URL " + r.URL.Path)
 
 	var fp, ref string
-	if m.Simple != "" {
+	if module.Simple != "" {
 		fp = strings.TrimPrefix(r.URL.Path, "/") // we need to trim the leading prefix because the rest of the module is too stupid
 		ref = r.URL.Query().Get("ref")
 	} else {
 		fmt.Println("NON SIMPLE SETUP")
 		// remove the domain if it's set (works fine if it's empty)
-		host := strings.TrimRight(strings.TrimSuffix(r.Host, m.Domain), ".")
+		host := strings.TrimRight(strings.TrimSuffix(r.Host, module.Domain), ".")
 		h := strings.Split(host, ".")
 
 		fp = h[0] + r.URL.Path
 		ref = r.URL.Query().Get("ref")
 
 		// if we haven't specified a domain, do not support repo.username and branch.repo.username
-		if m.Domain != "" {
+		if module.Domain != "" {
 			switch {
 			case len(h) == 2:
 				fp = h[1] + "/" + h[0] + r.URL.Path
@@ -118,7 +117,7 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhtt
 		}
 	}
 
-	f, err := m.Client.Open(fp, ref)
+	f, err := module.Client.Open(fp, ref)
 	if err != nil {
 		return caddyhttp.Error(http.StatusNotFound, err)
 	}
@@ -141,8 +140,8 @@ func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request, _ caddyhtt
 
 // Interface guards
 var (
-	_ caddy.Provisioner           = (*Middleware)(nil)
-	_ caddy.Validator             = (*Middleware)(nil)
-	_ caddyhttp.MiddlewareHandler = (*Middleware)(nil)
-	_ caddyfile.Unmarshaler       = (*Middleware)(nil)
+	_ caddy.Provisioner           = (*GiteaPagesModule)(nil)
+	_ caddy.Validator             = (*GiteaPagesModule)(nil)
+	_ caddyhttp.MiddlewareHandler = (*GiteaPagesModule)(nil)
+	_ caddyfile.Unmarshaler       = (*GiteaPagesModule)(nil)
 )
