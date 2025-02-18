@@ -118,11 +118,15 @@ Documentation Caddy extensions: https://caddyserver.com/docs/extending-caddy
 As this is a 3rd party plugin you'll need to build caddy (or use the binaries).
 To build with this plugin you'll need to have go1.19 installed.
 
-```go
+```bash
 go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest #this will install xcaddy in ~/go/bin
 ~/go/bin/xcaddy build --with github.com/simongregorebner/caddy-gitea@v0.0.4
 
+# with commit from github
 xcaddy build --with github.com/simongregorebner/caddy-gitea@f4a6a77
+
+# with local module
+xcaddy build --with github.com/simongregorebner/caddy-gitea=.
 ```
 
 ## Testing
