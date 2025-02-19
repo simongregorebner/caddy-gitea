@@ -24,7 +24,6 @@ func init() {
 func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error) {
 	var module GiteaPagesModule
 	err := module.UnmarshalCaddyfile(h.Dispenser)
-
 	return module, err
 }
 
@@ -60,14 +59,8 @@ func (module *GiteaPagesModule) Provision(ctx caddy.Context) error {
 	return err
 }
 
-// // Validate implements caddy.Validator.
-// func (module *GiteaPagesModule) Validate() error {
-// 	return nil
-// }
-
 // UnmarshalCaddyfile unmarshals a Caddyfile.
 func (module *GiteaPagesModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
-	fmt.Println("HERE")
 	for d.Next() {
 		for n := d.Nesting(); d.NextBlock(n); {
 			switch d.Val() {
@@ -185,7 +178,7 @@ func (module GiteaPagesModule) ServeHTTP(writer http.ResponseWriter, request *ht
 		extension := parts[len(parts)-1] // get file extension
 		writer.Header().Add("Content-Type", mime.TypeByExtension("."+extension))
 	}
-
+	// writer.Write(content)
 	_, err = io.Copy(writer, content)
 
 	return err
@@ -193,8 +186,7 @@ func (module GiteaPagesModule) ServeHTTP(writer http.ResponseWriter, request *ht
 
 // Interface guards
 var (
-	_ caddy.Provisioner = (*GiteaPagesModule)(nil)
-	// _ caddy.Validator             = (*GiteaPagesModule)(nil)
+	_ caddy.Provisioner           = (*GiteaPagesModule)(nil)
 	_ caddyhttp.MiddlewareHandler = (*GiteaPagesModule)(nil)
 	_ caddyfile.Unmarshaler       = (*GiteaPagesModule)(nil)
 )

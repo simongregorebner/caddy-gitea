@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
-	"strings"
 
 	gclient "code.gitea.io/sdk/gitea"
 	"go.uber.org/zap"
@@ -57,58 +56,6 @@ func (c *Client) Get(organization, repository, path string) (fs.File, error) {
 	}, nil
 }
 
-func (c *Client) Open(name string) (fs.File, error) {
-
-	c.logger.Info(fmt.Sprintf("Retrieve path: %s", name))
-	owner, repo, filepath := splitName(name)
-
-	c.logger.Info(fmt.Sprintf("After path split: owner: %s repo: %s filepath: %s", owner, repo, filepath))
-
-	// if repo is empty they want to have the gitea-pages repo
-	if repo == "" {
-		repo = c.branchName
-		filepath = "index.html"
-	}
-
-	// we need to check if the repo exists (and allows access)
-	limited, allowall := c.allowsPages(owner, repo)
-	if !limited && !allowall {
-		// if we're checking the gitea-pages and it doesn't exist, return 404
-		if repo == c.branchName && !c.RepoBranchExists(owner, repo, c.branchName) {
-			return nil, fs.ErrNotExist
-		}
-
-		// the repo didn't exist but maybe it's a filepath in the gitea-pages repo
-		// so we need to check if the gitea-pages repo exists
-		if filepath == "" {
-			filepath = repo
-		} else {
-			filepath = repo + "/" + filepath
-		}
-		repo = c.branchName
-
-		limited, allowall = c.allowsPages(owner, repo)
-		if !limited && !allowall || !c.RepoBranchExists(owner, repo, c.branchName) {
-			return nil, fs.ErrNotExist
-		}
-	}
-
-	// If filepath is empty they want to have the index.html
-	if filepath == "" {
-		filepath = "index.html"
-	}
-
-	content, err := c.getRawFileOrLFS(owner, repo, filepath, c.branchName)
-	if err != nil {
-		return nil, err
-	}
-
-	return &openFile{
-		content: content,
-		name:    filepath,
-	}, nil
-}
-
 // Retrieve specific file from gitea server
 func (client *Client) getRawFileOrLFS(owner, repo, filepath, branch string) ([]byte, error) {
 
@@ -156,24 +103,18 @@ func (client *Client) getRawFileOrLFS(owner, repo, filepath, branch string) ([]b
 	return content, nil
 }
 
-// Read list of assigned topics for a given repo
-func (client *Client) repoTopics(owner, repo string) ([]string, error) {
-	topics, _, err := client.gc.ListRepoTopics(owner, repo, gclient.ListRepoTopicsOptions{})
-	return topics, err
-}
-
-// Check if the repo has a specific branc
-func (c *Client) RepoBranchExists(owner, repo, branchName string) bool {
-	branchInfo, _, err := c.gc.GetRepoBranch(owner, repo, branchName)
+// Check if the repo has a specific branch
+func (c *Client) RepoBranchExists(organization, repository, branch string) bool {
+	branchInfo, _, err := c.gc.GetRepoBranch(organization, repository, branch)
 	if err != nil {
 		return false
 	}
-
-	return branchInfo.Name == branchName
+	return branchInfo.Name == branch
 }
 
-func (client *Client) hasTopic(owner, repo, topicName string) bool {
-	topics, _, err := client.gc.ListRepoTopics(owner, repo, gclient.ListRepoTopicsOptions{})
+// Check if a repo has a specific topic assigned
+func (client *Client) TopicExists(organization, repository, topicName string) bool {
+	topics, _, err := client.gc.ListRepoTopics(organization, repository, gclient.ListRepoTopicsOptions{})
 	if err != nil {
 		return false
 	}
@@ -184,34 +125,4 @@ func (client *Client) hasTopic(owner, repo, topicName string) bool {
 		}
 	}
 	return false
-}
-
-// Check if repo has giteapages label attached
-func (c *Client) allowsPages(owner, repo string) (bool, bool) {
-	topics, err := c.repoTopics(owner, repo)
-	if err != nil {
-		return false, false
-	}
-
-	for _, topic := range topics {
-		if topic == c.branchName {
-			return true, false
-		}
-	}
-
-	return false, false
-}
-
-func splitName(name string) (string, string, string) {
-	parts := strings.Split(name, "/")
-
-	// parts contains: ["owner", "repo", "filepath"]
-	switch len(parts) {
-	case 1:
-		return parts[0], "", ""
-	case 2:
-		return parts[0], parts[1], ""
-	default:
-		return parts[0], parts[1], strings.Join(parts[2:], "/")
-	}
 }

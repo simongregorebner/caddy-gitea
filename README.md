@@ -164,6 +164,9 @@ log {
 * url_scheme - supported values: simple, classic
 
 # References
+
+Implementation based on the example here: https://caddyserver.com/docs/extending-caddy
+
 ## Github
 - `gh-pages` branch
 - or `<organization/user>.github.io` repository
