@@ -46,8 +46,6 @@ func (c *Client) Get(organization, repository, path string) (fs.File, error) {
 	// 	return nil, fs.ErrNotExist
 	// }
 
-	c.logger.Info(fmt.Sprintf("After path split: owner: %s repo: %s filepath: %s", organization, repository, path))
-
 	content, err := c.getRawFileOrLFS(organization, repository, path, c.branchName)
 	if err != nil {
 		return nil, err
@@ -76,7 +74,7 @@ func (c *Client) Open(name string) (fs.File, error) {
 	limited, allowall := c.allowsPages(owner, repo)
 	if !limited && !allowall {
 		// if we're checking the gitea-pages and it doesn't exist, return 404
-		if repo == c.branchName && !c.hasRepoBranch(owner, repo, c.branchName) {
+		if repo == c.branchName && !c.RepoBranchExists(owner, repo, c.branchName) {
 			return nil, fs.ErrNotExist
 		}
 
@@ -90,7 +88,7 @@ func (c *Client) Open(name string) (fs.File, error) {
 		repo = c.branchName
 
 		limited, allowall = c.allowsPages(owner, repo)
-		if !limited && !allowall || !c.hasRepoBranch(owner, repo, c.branchName) {
+		if !limited && !allowall || !c.RepoBranchExists(owner, repo, c.branchName) {
 			return nil, fs.ErrNotExist
 		}
 	}
@@ -165,7 +163,7 @@ func (client *Client) repoTopics(owner, repo string) ([]string, error) {
 }
 
 // Check if the repo has a specific branc
-func (c *Client) hasRepoBranch(owner, repo, branchName string) bool {
+func (c *Client) RepoBranchExists(owner, repo, branchName string) bool {
 	branchInfo, _, err := c.gc.GetRepoBranch(owner, repo, branchName)
 	if err != nil {
 		return false

@@ -142,3 +142,29 @@ docker build -t container.psi.ch/images/gitea-caddy:1.0.4 .
 # cross platform build
 docker build --platform=linux/amd64 -t container.psi.ch/images/gitea-caddy:1.0.4 .
 ```
+
+
+```
+{
+        order gitea before file_server
+}
+:8080
+gitea {
+        server https://gitea-test.psi.ch
+        token 8f51ce808dc76b8559a8b80018b4ed68420b1115
+        url_scheme simple
+        log {
+            level debug
+        }
+}
+log {
+        level debug
+}
+```
+* url_scheme - supported values: simple, classic
+
+# References
+## Github
+- `gh-pages` branch
+- or `<organization/user>.github.io` repository
+- https://pages.github.com

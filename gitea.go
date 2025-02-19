@@ -1,6 +1,7 @@
 package gitea
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -29,12 +30,12 @@ func parseCaddyfile(h httpcaddyfile.Helper) (caddyhttp.MiddlewareHandler, error)
 
 // GiteaPagesModule implements gitea plugin.
 type GiteaPagesModule struct {
-	Client     *gitea.Client `json:"-"`
-	Server     string        `json:"server,omitempty"`
-	Token      string        `json:"token,omitempty"`
-	GiteaPages string        `json:"gitea_pages,omitempty"`
-	Domain     string        `json:"domain,omitempty"`
-	Simple     string        `json:"simple,omitempty"`
+	Client          *gitea.Client `json:"-"`
+	Server          string        `json:"server,omitempty"`
+	Token           string        `json:"token,omitempty"`
+	PagesBranch     string        `json:"pages_branch,omitempty"`
+	PagesRepository string        `json:"pages_repository,omitempty"`
+	URLScheme       string        `json:"url_scheme,omitempty"`
 }
 
 // CaddyModule returns the Caddy module information.
@@ -53,25 +54,20 @@ func (module *GiteaPagesModule) Provision(ctx caddy.Context) error {
 	// https://caddyserver.com/docs/extending-caddy#logs
 	var logger = ctx.Logger() // get logger
 
-	requiredBranchName := "gitea-pages"
-	requiredTopicName := "gitea-pages"
-	if module.GiteaPages != "" {
-		requiredBranchName = module.GiteaPages
-		requiredTopicName = module.GiteaPages
-	}
-
-	module.Client, err = gitea.NewClient(logger, module.Server, module.Token, requiredBranchName, requiredTopicName)
+	// maye we should drop the topic - currently using just the same topic name as the required banch name
+	module.Client, err = gitea.NewClient(logger, module.Server, module.Token, module.PagesBranch, module.PagesBranch)
 
 	return err
 }
 
-// Validate implements caddy.Validator.
-func (module *GiteaPagesModule) Validate() error {
-	return nil
-}
+// // Validate implements caddy.Validator.
+// func (module *GiteaPagesModule) Validate() error {
+// 	return nil
+// }
 
 // UnmarshalCaddyfile unmarshals a Caddyfile.
 func (module *GiteaPagesModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+	fmt.Println("HERE")
 	for d.Next() {
 		for n := d.Nesting(); d.NextBlock(n); {
 			switch d.Val() {
@@ -79,14 +75,33 @@ func (module *GiteaPagesModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error
 				d.Args(&module.Server)
 			case "token":
 				d.Args(&module.Token)
-			case "gitea_pages":
-				d.Args(&module.GiteaPages)
-			case "domain":
-				d.Args(&module.Domain)
-			case "simple":
-				d.Args(&module.Simple)
+			case "pages_branch":
+				d.Args(&module.PagesBranch)
+			case "pages_repository":
+				d.Args(&module.PagesRepository)
+			case "url_scheme":
+				d.Args(&module.URLScheme)
 			}
 		}
+
+		// Set defaults
+		if module.PagesBranch == "" {
+			module.PagesBranch = "gitea-pages"
+		}
+		if module.PagesRepository == "" {
+			module.PagesRepository = "gitea-pages"
+		}
+
+		if module.URLScheme == "" {
+			module.URLScheme = "simple"
+		}
+		// Only accept simple and classic option
+		switch module.URLScheme {
+		case "simple", "classic":
+		default:
+			return errors.New("Invalid URL scheme: " + module.URLScheme)
+		}
+
 	}
 	return nil
 }
@@ -97,10 +112,13 @@ func (module GiteaPagesModule) ServeHTTP(writer http.ResponseWriter, request *ht
 	fmt.Println("URL " + request.URL.Path)
 
 	var organization, repository, path string
-	if module.Simple != "" { // Simple case
-		// we remove a potential prefix and then split up the path
-		// The path looks like /<organization>/<repository>/ ...
-		parts := strings.Split(strings.TrimPrefix(request.URL.Path, "/"), "/")
+	if module.URLScheme == "simple" {
+		fmt.Println("SIMPLE")
+		// "Simple" URL case - we expect the organization and repository in the URL
+		// The URL/path looks like http(s)://<giteaserver>[:<port>]/<organization>/<repository>[/<filepath>]
+
+		// Remove a potential "/" prefix and trailing "/" -  then split up the path
+		parts := strings.Split(strings.TrimSuffix(strings.TrimPrefix(request.URL.Path, "/"), "/"), "/")
 
 		length := len(parts)
 		if length <= 1 {
@@ -114,29 +132,45 @@ func (module GiteaPagesModule) ServeHTTP(writer http.ResponseWriter, request *ht
 			repository = parts[1]
 			path = strings.Join(parts[2:], "/")
 		}
-		if path == "" {
-			path = "index.html"
-		}
-
 	} else {
-		// TODO not yet supported
+		// "Classic" URL/host scheme
+		// The URL/path looks like http(s)://<organization>.<giteaserver>[:<port>]/<repository>/[/<filepath>]
 
-		// fmt.Println("NON SIMPLE SETUP")
-		// // remove the domain if it's set (works fine if it's empty)
-		// host := strings.TrimRight(strings.TrimSuffix(request.Host, module.Domain), ".")
-		// h := strings.Split(host, ".")
+		// extract the organization from the hostname
+		organization = strings.TrimRight(request.Host, ".")
 
-		// fp = h[0] + request.URL.Path
+		// Remove a potential "/" prefix and trailing "/" -  then split up the path
+		path = strings.TrimSuffix(strings.TrimPrefix(request.URL.Path, "/"), "/")
 
-		// // if we haven't specified a domain, do not support repo.username and branch.repo.username
-		// if module.Domain != "" {
-		// 	switch {
-		// 	case len(h) == 2:
-		// 		fp = h[1] + "/" + h[0] + request.URL.Path
-		// 	case len(h) == 3:
-		// 		fp = h[2] + "/" + h[1] + request.URL.Path
-		// 	}
-		// }
+		if path == "" {
+			// Case http(s)://<organization>.<giteaserver>[:<port>]
+			// Use of the gitea-pages repository in the specified organization
+			// TODO use github pages convention
+			// repository = organization + "." + module.PagesRepository
+			repository = module.PagesRepository
+			path = "index.html"
+
+		} else {
+			parts := strings.Split(path, "/")
+			// The part[0] can now be a repository name or already the filepath (organization wide pages repo)
+			// Because we checked for "" before we know that we at least have one part
+
+			// Check if parts[0] identifies a repo in the organization
+			// TODO cache this result for some time part[0] == repository(true/false)
+			if module.Client.RepoBranchExists(organization, parts[0], module.PagesBranch) {
+				// Its a specifig repo inside the organization
+				repository = parts[0]
+				if len(parts) == 1 {
+					path = "index.html"
+				} else {
+					path = strings.Join(parts[1:], "/")
+				}
+			} else {
+				// Assuming  organization repo
+				repository = module.PagesRepository
+				path = strings.Join(parts[0:], "/")
+			}
+		}
 	}
 
 	// Handle request
@@ -159,8 +193,8 @@ func (module GiteaPagesModule) ServeHTTP(writer http.ResponseWriter, request *ht
 
 // Interface guards
 var (
-	_ caddy.Provisioner           = (*GiteaPagesModule)(nil)
-	_ caddy.Validator             = (*GiteaPagesModule)(nil)
+	_ caddy.Provisioner = (*GiteaPagesModule)(nil)
+	// _ caddy.Validator             = (*GiteaPagesModule)(nil)
 	_ caddyhttp.MiddlewareHandler = (*GiteaPagesModule)(nil)
 	_ caddyfile.Unmarshaler       = (*GiteaPagesModule)(nil)
 )
