@@ -3,7 +3,6 @@ package gitea
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -102,8 +101,6 @@ func (module *GiteaPagesModule) UnmarshalCaddyfile(d *caddyfile.Dispenser) error
 // ServeHTTP performs gitea content fetcher.
 func (module GiteaPagesModule) ServeHTTP(writer http.ResponseWriter, request *http.Request, _ caddyhttp.Handler) error {
 
-	fmt.Println("URL " + request.URL.Path)
-
 	var organization, repository, path string
 	if module.URLScheme == "simple" {
 		fmt.Println("SIMPLE")
@@ -168,6 +165,7 @@ func (module GiteaPagesModule) ServeHTTP(writer http.ResponseWriter, request *ht
 
 	// Handle request
 	content, err := module.Client.Get(organization, repository, path)
+	// content, err := module.Client.Get2(organization, repository, path)
 	if err != nil {
 		return caddyhttp.Error(http.StatusNotFound, err)
 	}
@@ -178,9 +176,8 @@ func (module GiteaPagesModule) ServeHTTP(writer http.ResponseWriter, request *ht
 		extension := parts[len(parts)-1] // get file extension
 		writer.Header().Add("Content-Type", mime.TypeByExtension("."+extension))
 	}
-	// writer.Write(content)
-	_, err = io.Copy(writer, content)
-
+	_, err = writer.Write(content)
+	// _, err = io.Copy(writer, content)
 	return err
 }
 
