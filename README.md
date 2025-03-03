@@ -1,3 +1,8 @@
+# DISCONTINUED - PLEASE USE COMPLETE REWRITE OF THE PAGES SERVER (gitea-pages) INSTEAD 
+# https://github.com/simongregorebner/gitea-pages
+
+
+
 # caddy-gitea
 
 [Gitea](https://gitea.io) plugin for [Caddy v2](https://github.com/caddyserver/caddy).
